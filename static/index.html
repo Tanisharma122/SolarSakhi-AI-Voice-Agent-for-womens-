@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surya — AI Solar Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* ── Header ── */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(90deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p {
+            color: #aaa;
+            font-size: 0.95rem;
+            margin-top: 5px;
+        }
+
+        /* ── Stats Cards ── */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 25px;
+        }
+        .card {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 18px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .card .icon { font-size: 1.8rem; }
+        .card .value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #ffd200;
+            margin: 5px 0;
+        }
+        .card .label {
+            font-size: 0.75rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ── Battery Bar ── */
+        .battery-bar {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            height: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+        .battery-fill {
+            height: 100%;
+            border-radius: 50px;
+            background: linear-gradient(90deg, #f7971e, #ffd200);
+            transition: width 1s ease;
+        }
+
+        /* ── Chat Box ── */
+        .chat-box {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+        .message.user .bubble {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: #000;
+            border-radius: 18px 18px 4px 18px;
+            padding: 10px 15px;
+            display: inline-block;
+            max-width: 85%;
+            float: right;
+            clear: both;
+        }
+        .message.agent .bubble {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 18px 18px 18px 4px;
+            padding: 10px 15px;
+            display: inline-block;
+            max-width: 85%;
+            float: left;
+            clear: both;
+        }
+        .message.agent .name {
+            font-size: 0.7rem;
+            color: #ffd200;
+            margin-bottom: 4px;
+            float: left;
+            clear: both;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Input Area ── */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+        }
+        .input-area input {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50px;
+            padding: 12px 20px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .input-area input::placeholder { color: #777; }
+        .input-area input:focus {
+            border-color: #ffd200;
+        }
+        .btn-send {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        /* ── Mic Button ── */
+        .mic-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(247,151,30,0.4);
+        }
+        .mic-btn.listening {
+            animation: pulse 1s infinite;
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            box-shadow: 0 0 30px rgba(255,65,108,0.6);
+        }
+        @keyframes pulse {
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* ── Status ── */
+        .status-text {
+            color: #aaa;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* ── Safety Badge ── */
+        .safety-badge {
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .safe    { background: rgba(0,200,100,0.2); color: #00c864; border: 1px solid #00c864; }
+        .unsafe  { background: rgba(255,50,50,0.2); color: #ff3232; border: 1px solid #ff3232; }
+
+        /* ── Battery Input ── */
+        .battery-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .battery-input input {
+            width: 70px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 6px 10px;
+            color: white;
+            text-align: center;
+            outline: none;
+        }
+        .battery-input button {
+            background: rgba(255,210,0,0.2);
+            border: 1px solid #ffd200;
+            color: #ffd200;
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>☀️ Surya</h1>
+        <p>AI Solar Energy Assistant for Rural Women</p>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="stats">
+        <div class="card">
+            <div class="icon">🔋</div>
+            <div class="value" id="battery-val">--%</div>
+            <div class="label">Battery</div>
+        </div>
+        <div class="card">
+            <div class="icon">⚡</div>
+            <div class="value" id="peak-val">--:00</div>
+            <div class="label">Peak Solar</div>
+        </div>
+        <div class="card">
+            <div class="icon">💰</div>
+            <div class="value" id="savings-val">₹--</div>
+            <div class="label">Today's Savings</div>
+        </div>
+        <div class="card">
+            <div class="icon">🌙</div>
+            <div class="value" id="safe-val">--</div>
+            <div class="label">Night Safety</div>
+        </div>
+    </div>
+
+    <!-- Battery Bar -->
+    <div class="battery-bar">
+        <div class="battery-fill" id="battery-bar" style="width:0%"></div>
+    </div>
+
+    <!-- Safety Badge -->
+    <div class="safety-badge safe" id="safety-badge">
+        ✅ Safe for tonight
+    </div>
+
+    <!-- Battery Manual Input -->
+    <div class="battery-input">
+        <span>My battery is:</span>
+        <input type="number" id="manual-battery" min="0" max="100" placeholder="60">
+        <span>%</span>
+        <button onclick="updateBattery()">Update</button>
+    </div>
+
+    <!-- Chat Box -->
+    <div class="chat-box" id="chat-box">
+        <div class="message agent">
+            <div class="name">Surya</div>
+            <div class="bubble">
+                Hello! I am Surya, your solar energy assistant.
+                Tell me your battery level and ask me anything
+                about your solar power today! 🌞
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Input -->
+    <div class="input-area">
+        <input
+            type="text"
+            id="text-input"
+            placeholder="Ask about solar, battery, appliances..."
+            onkeypress="if(event.key==='Enter') sendText()"
+        />
+        <button class="btn-send" onclick="sendText()">Send</button>
+    </div>
+
+    <!-- Mic Button -->
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+    <div class="status-text" id="status-text">Click mic to speak</div>
+
+    <script>
+        // ── State ──────────────────────────────────────
+        let isListening   = false;
+        let recognition   = null;
+        let manualBattery = null;
+
+        // ── Load Status on Start ───────────────────────
+        async function loadStatus() {
+            try {
+                const res  = await fetch('/status');
+                const data = await res.json();
+                updateCards(data);
+            } catch(e) {
+                console.log('Status load failed:', e);
+            }
+        }
+
+        function updateCards(data) {
+            document.getElementById('battery-val').textContent =
+                data.battery.toFixed(0) + '%';
+            document.getElementById('peak-val').textContent =
+                data.peak_hour + ':00';
+            document.getElementById('savings-val').textContent =
+                '₹' + data.savings.toFixed(0);
+            document.getElementById('safe-val').textContent =
+                data.safe_tonight ? 'Safe ✅' : 'Risk ⚠️';
+
+            // Battery bar
+            document.getElementById('battery-bar').style.width =
+                data.battery + '%';
+
+            // Safety badge
+            const badge = document.getElementById('safety-badge');
+            if(data.safe_tonight) {
+                badge.className = 'safety-badge safe';
+                badge.textContent = '✅ Battery safe for tonight';
+            } else {
+                badge.className = 'safety-badge unsafe';
+                badge.textContent = '⚠️ Battery risk tonight — save power!';
+            }
+        }
+
+        // ── Send Text Message ──────────────────────────
+        async function sendText() {
+            const input = document.getElementById('text-input');
+            const msg   = input.value.trim();
+            if(!msg) return;
+
+            addMessage(msg, 'user');
+            input.value = '';
+            setStatus('Thinking...');
+
+            await sendToAgent(msg);
+        }
+
+        // ── Send to Backend ────────────────────────────
+        async function sendToAgent(message) {
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: message,
+                        battery: manualBattery
+                    })
+                });
+
+                const data = await res.json();
+                addMessage(data.response, 'agent');
+                updateCards(data);
+                speak(data.response);
+                setStatus('Click mic to speak');
+
+            } catch(e) {
+                addMessage('Sorry, something went wrong. Please try again.', 'agent');
+                setStatus('Error — try again');
+            }
+        }
+
+        // ── Add Message to Chat ────────────────────────
+        function addMessage(text, sender) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+
+            if(sender === 'agent') {
+                div.innerHTML = `
+                    <div class="name">Surya</div>
+                    <div class="bubble">${text}</div>
+                    <div style="clear:both"></div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="bubble">${text}</div>
+                    <div style="clear:both"></div>
+                `;
+            }
+
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // ── Browser TTS ────────────────────────────────
+        function speak(text) {
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utt  = new SpeechSynthesisUtterance(text);
+                utt.lang   = 'en-IN';
+                utt.rate   = 0.95;
+                utt.pitch  = 1.1;
+                window.speechSynthesis.speak(utt);
+            }
+        }
+
+        // ── Mic Toggle ─────────────────────────────────
+        function toggleMic() {
+            if(isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert('Speech recognition not supported. Use Chrome browser!');
+                return;
+            }
+
+            const SR    = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SR();
+
+            recognition.lang        = 'en-IN';
+            recognition.continuous  = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('mic-btn').classList.add('listening');
+                document.getElementById('mic-btn').textContent = '🔴';
+                setStatus('Listening... speak now!');
+            };
+
+            recognition.onresult = async (event) => {
+                const text = event.results[0][0].transcript;
+                setStatus('Processing: ' + text);
+                addMessage(text, 'user');
+                await sendToAgent(text);
+            };
+
+            recognition.onerror = (e) => {
+                setStatus('Error: ' + e.error + ' — try again');
+                stopListening();
+            };
+
+            recognition.onend = () => {
+                stopListening();
+            };
+
+            recognition.start();
+        }
+
+        function stopListening() {
+            isListening = false;
+            document.getElementById('mic-btn').classList.remove('listening');
+            document.getElementById('mic-btn').textContent = '🎤';
+            if(recognition) recognition.stop();
+        }
+
+        // ── Manual Battery Update ──────────────────────
+        function updateBattery() {
+            const val = document.getElementById('manual-battery').value;
+            if(val && val >= 0 && val <= 100) {
+                manualBattery = parseFloat(val);
+                setStatus(`Battery set to ${val}% — ask me anything!`);
+                document.getElementById('battery-bar').style.width = val + '%';
+                document.getElementById('battery-val').textContent = val + '%';
+            }
+        }
+
+        function setStatus(text) {
+            document.getElementById('status-text').textContent = text;
+        }
+
+        // ── Init ───────────────────────────────────────
+        loadStatus();
+    </script>
+</body>
+</html>
